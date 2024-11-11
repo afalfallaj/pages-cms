@@ -102,6 +102,10 @@
                 <div class="fb-files-item-name">{{  item.name }}</div>
                 <div class="fb-files-item-meta">
                   <div class="fb-files-item-meta-size">{{ $filters.fileSize(item.size) }}</div>
+                  <div v-if="checkMediaUsageStatus(item)"></div>
+                  <!-- Status messages will be shown based on the item state -->
+                  <div v-if="!item.usageChecked && item.checkingUsage" class="text-gray-500 text-xs">Checking if used...</div>
+                  <div v-else-if="item.usageChecked && !item.isUsed" class="text-orange-500 text-xs">Likely Unused.</div>
                 </div>
                 <!-- Options -->
                 <div class="fb-files-item-options">
@@ -342,6 +346,21 @@ const breadcrumb = computed(() => {
     return breadcrumbSegments;
   }
 });
+
+const checkMediaUsageStatus = async (item) => {
+  if (item.usageChecked) return;
+  item.checkingUsage = true;
+  try {
+    const isNotUsed = await github.isFileNotUsed(props.owner, props.repo, item.name);
+    item.isUsed = !isNotUsed;
+    item.usageChecked = true;
+  } catch (error) {
+    item.isUsed = true; // Assume used if there's an error
+  } finally {
+    item.checkingUsage = false;
+    contents.value = [...contents.value];
+  }
+};
 
 const setContents = async () => {
   status.value = 'loading';
