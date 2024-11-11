@@ -580,4 +580,46 @@ const logout = async () => {
   }
 };
 
-export default { token, profile, setToken, clearToken, getProfile, getOrganizations, searchRepos, getRepo, copyRepoTemplate, getBranch, getBranches, createBranch, getContents, getFile, getCommits, saveFile, renameFile, deleteFile, logout };
+/**
+ * Performs a search in the GitHub repository using the GitHub Code Search API.
+ * @param {string} owner - The repository owner.
+ * @param {string} repo - The repository name.
+ * @param {string} query - The search query.
+ * @returns {Promise<Array|null>} - The list of items found by the search, or null if the request failed.
+ */
+const searchInRepo = async (owner, repo, query) => {
+  try {
+    const cleanedQuery = query.replace(/^"|"$/g, '');
+    const finalQuery = `${encodeURIComponent(cleanedQuery)} repo:${owner}/${repo}`;
+    const response = await axios.get('https://api.github.com/search/code', {
+      params: {
+        q: finalQuery,
+        timestamp: Date.now()
+      },
+      headers: {
+        Authorization: `Bearer ${token.value}`
+      }
+    });
+    if (response.status === 200) {
+      return response.data.items || [];
+    }
+    return null;
+  } catch (error) {
+    // console.error('[ERROR] Failed to search in repository:', error);
+    return null;
+  }
+};
+
+/**
+ * Checks if a given file is not used in the repository.
+ * @param {string} owner - The repository owner.
+ * @param {string} repo - The repository name.
+ * @param {string} fileName - The filename to check.
+ * @returns {Promise<boolean>} - Returns true if the file is not used, otherwise false.
+ */
+const isFileNotUsed = async (owner, repo, fileName) => {
+  const searchResults = await searchInRepo(owner, repo, `"${fileName}"`);
+    return searchResults !== null && searchResults.length === 0;
+};
+
+export default { token, profile, setToken, clearToken, getProfile, getOrganizations, searchRepos, getRepo, copyRepoTemplate, getBranch, getBranches, createBranch, getContents, getFile, getCommits, saveFile, renameFile, deleteFile, logout, searchInRepo, isFileNotUsed };
