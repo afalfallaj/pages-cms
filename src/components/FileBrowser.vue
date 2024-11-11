@@ -102,6 +102,7 @@
                 <div class="fb-files-item-name">{{  item.name }}</div>
                 <div class="fb-files-item-meta">
                   <div class="fb-files-item-meta-size">{{ $filters.fileSize(item.size) }}</div>
+                  <div v-if="!item.used" class="text-orange-500 text-xs">Likely Unused.</div>
                 </div>
                 <!-- Options -->
                 <div class="fb-files-item-options">
@@ -361,9 +362,12 @@ const setContents = async () => {
       githubImg.state.cache[fullPath].files[file.name] = file.download_url;
     });
     // We build the contents of our current folder
+    const fileNames = contentsData.map(item => item.name);
+    const usedFiles = await github.isFileUsed(props.owner, props.repo, fileNames);
     contents.value = contentsData.map((item) => {
       let extension = '';
       let kind = 'other';
+      let used = false;
 
       if (item.type === 'file') {
         const parts = item.name.split('.');
@@ -371,16 +375,17 @@ const setContents = async () => {
           extension = parts.pop().toLowerCase();
           kind = Object.keys(extensionCategories).find(key => extensionCategories[key].includes(extension)) || 'other';
         }
+        used = usedFiles.has(item.name);
       }
 
-      return { ...item, extension, kind };
+      return { ...item, extension, kind, used };
     });
     // We sort by type first and name second
     contents.value = contents.value.sort((a, b) => { 
       if (a.type !== b.type) {
         return a.type === 'dir' ? -1 : 1;
       }
-      
+
       return a.name.localeCompare(b.name);
     });
   } else {

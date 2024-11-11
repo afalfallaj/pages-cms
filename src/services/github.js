@@ -580,4 +580,53 @@ const logout = async () => {
   }
 };
 
-export default { token, profile, setToken, clearToken, getProfile, getOrganizations, searchRepos, getRepo, copyRepoTemplate, getBranch, getBranches, createBranch, getContents, getFile, getCommits, saveFile, renameFile, deleteFile, logout };
+/**
+ * Performs a search in the GitHub repository using the GitHub Code Search API.
+ * @param {string} owner - The repository owner.
+ * @param {string} repo - The repository name.
+ * @param {string} query - The search query.
+ * @returns {Promise<Array>} - The list of items found by the search.
+ */
+const searchInRepo = async (owner, repo, query) => {
+  try {
+    const response = await axios.get(`https://api.github.com/search/code`, {
+      params: {
+        q: `${query} repo:${owner}/${repo}`,
+        timestamp: Date.now()
+      },
+      headers: {
+        Authorization: `Bearer ${token.value}`
+      }
+    });
+    return response.data.items || [];
+  } catch (error) {
+    console.error('[ERROR] Failed to search in repository:', error);
+    return [];
+  }
+};
+
+/**
+ * Checks if a given list of files are used in the repository.
+ * @param {string} owner - The repository owner.
+ * @param {string} repo - The repository name.
+ * @param {Array<string>} fileNames - The list of filenames to check.
+ * @returns {Promise<Set<string>>} - A set of filenames that are used.
+ */
+const isFileUsed = async (owner, repo, fileNames) => {
+  const usedFiles = new Set();
+
+  for (const fileName of fileNames) {
+    const searchResults = await searchInRepo(owner, repo, `"${fileName}"`);
+    if (searchResults && searchResults.length > 0) {
+      usedFiles.add(fileName);
+    }
+  }
+
+  return usedFiles;
+};
+
+
+
+
+
+export default { token, profile, setToken, clearToken, getProfile, getOrganizations, searchRepos, getRepo, copyRepoTemplate, getBranch, getBranches, createBranch, getContents, getFile, getCommits, saveFile, renameFile, deleteFile, logout, searchInRepo, isFileUsed };
